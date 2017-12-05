@@ -1,14 +1,16 @@
 Attribute VB_Name = "Markup2Footnote"
 Sub Markup2Footnote()
+    Application.ScreenUpdating = False
+
     Dim ct As Range
     Set ct = ActiveDocument.Content
-    Dim TextToFootnote As String, OpenMark As String, CloseMark As String
+    Dim TextToFootnote As String
     Dim CountFootnote As Long
     CountFootnote = 0
 
     With ct.Find
         .ClearFormatting
-        .Wrap = wdFindContinue
+        .Wrap = wdFindStop
         .Forward = True
         .Format = False
         .MatchCase = False
@@ -22,20 +24,22 @@ Sub Markup2Footnote()
     End With
     
 
-    Do
-        ct.Find.Execute
-        If ct.Find.Found = True Then
-            ' Extract text
-            TextToFootnote = Replace(ct.Text, "((", "")
-            TextToFootnote = Replace(TextToFootnote, "))", "")
-            CountFootnote = CountFootnote + 1
-            ' Clear found text
+        Do While (ct.Find.Execute = True)
+            ' Rip off markup
+            ActiveDocument.Range(Start:=ct.Start, End:=ct.Start + 2).Delete
+            ActiveDocument.Range(Start:=ct.End - 2, End:=ct.End).Delete
+            ct.Select
+            ' Cut selection to preserve formatting
+            Selection.Cut
+            ' Delete old text
             ct.Text = ""
-            ct.Collapse Direction:=wdCollapseEnd
+            CountFootnote = CountFootnote + 1
+            
             ' Add footnotes
-            ActiveDocument.Footnotes.Add Range:=ct, Text:=TextToFootnote
-        End If
-    Loop While ct.Find.Found
+            ActiveDocument.Footnotes.Add Range:=ct
+            Selection.PasteAndFormat Type:=wdFormatOriginalFormatting
+    Loop
+    
+    Application.ScreenUpdating = True
     MsgBox "Number of footnotes converted: " & CountFootnote
-
 End Sub
